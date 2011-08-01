@@ -15,7 +15,6 @@ class TestMockRedis(TestCase):
     def tearDown(self):
         self.r.data.clear()
 
-
     def test_zrange(self):
         assert (self.r.zrange('myzlist', 0, -1) ==
                 [(1, 'one'), (2, 'two'), (3, 'three')])
