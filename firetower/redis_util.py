@@ -23,6 +23,7 @@ class MockRedis(object):
         value = rhash.get(sub_key, 0)
         rhash[sub_key] = value + default
         self.data[root_key] = rhash
+        return rhash
 
     def keys(self):
         return self.data.keys()
@@ -36,6 +37,7 @@ class MockRedis(object):
         new = [value] + val_list
         val_list = new
         self.data[key] = val_list
+        return len(val_list)
 
     def lpop(self, key):
         val_list = self.data.get(key, [])
@@ -53,6 +55,7 @@ class MockRedis(object):
 
     def zadd(self, name, value, score):
         zheap = self.data.get(name, [])
+        #XXX:dc: This was unwise, lets remove the heapq fanciness
         heappush(zheap, (score, value))
         self.data[name] = zheap
 
@@ -92,7 +95,7 @@ class Redis(object):
         return self.conn.rpop(key)
 
     def push(self, key, value):
-        self.conn.lpush(key, value)
+        return self.conn.lpush(key, value)
 
     def len_incoming(self, key):
         """Return the length of the incoming queue."""
@@ -131,14 +134,15 @@ class Redis(object):
 
     def incr_counter(self, root_key):
         """Increment normalized count of errors by type."""
-        self.conn.hincrby(root_key.replace(' ', '_'), int(time.time()), 1)
+        return self.conn.hincrby(root_key.replace(' ', '_'),
+                                 int(time.time()), 1)
 
     def save_error(self, cat, error):
         """Save JSON encoded string into proper bucket."""
-        error_data_key = cat.replace(' ','_')
+        error_data_key = cat.replace(' ', '_')
         ts = time.time() # our timestamp, needed for uniq
         error['ts'] = ts
-        self.conn.zadd(error_data_key,  json.dumps(error), ts)
+        return self.conn.zadd(error_data_key,  json.dumps(error), ts)
 
     def add_category(self, category):
         """Add category to our sorted set of categories."""
@@ -150,7 +154,7 @@ class Redis(object):
 
     def add_unknown_error(self, error):
         """Add an unknown error to our list."""
-        self.push('unknown_errors', json.dumps(error))
+        return self.push('unknown_errors', json.dumps(error))
 
     def get_unknown_errors(self):
         """Generator to return one value from unknown_errors at a time."""
