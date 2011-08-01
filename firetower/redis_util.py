@@ -6,10 +6,14 @@ the main queue handler for firetower.
 """
 from heapq import heappush, merge
 import json
+import logging
 import time
 
 import redis
 from redis.exceptions import ConnectionError
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 class MockRedis(object):
@@ -164,10 +168,12 @@ class Redis(object):
             num += 1
 
     def get_latest_data(self, category):
-        """Return list of the most recent json encoded errors for a category."""
-        print "category: ", category
+        """
+        Return list of the most recent json encoded errors for a category.
+        """
+        logger.debug("category: %s", category)
         data_key = 'data_%s' % (category,)
-        print "data_key: ", data_key
+        logger.debug("data_key: %s", data_key)
         list_of_errors = self.conn.zrevrange(data_key, 0, 0)
         if list_of_errors:
             return list_of_errors

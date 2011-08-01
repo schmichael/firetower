@@ -19,6 +19,7 @@ FAKE_DATA = {'hostname': 'testmachine',
              'programname': 'firetower client',
              'severity': None}
 
+
 class Client(object):
     """Main loop."""
 
@@ -47,7 +48,8 @@ def main():
     if len(args) > 1:
         parser.error('Please supply some arguments')
 
-    conf = config.Config(options.conf_path)
+    with open(options.conf_path) as conf_file:
+        conf = config.Config(conf_file)
 
-    main = Client()
-    main.run(conf)
+        main = Client()
+        main.run(conf)
