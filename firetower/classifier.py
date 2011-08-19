@@ -82,11 +82,8 @@ class Levenshtein(Classifier):
             error: dict, error message we're processing
         """
         sig = error['sig']
-        unknown = 'unknown_errors'
-        if cat == unknown:
-            cat_errors = self.redis.get_unknown_errors()
-        else:
-            cat_errors = self.redis.get_latest_data(cat)
+
+        cat_errors = self.redis.get_latest_data(cat)
         if not cat_errors:
             return None
         for cat_error in cat_errors:
@@ -95,14 +92,8 @@ class Levenshtein(Classifier):
             decode_error = json.loads(cat_error)
             cat_sig = decode_error['sig']
             if self.is_similar(cat_sig, sig, 0.7):
-                if cat == unknown:
-                    cat = longest_common_substr(cat_sig, sig)
-                    self.redis.add_category(cat)
-                    self.write_errors(cat, decode_error)
                 self.write_errors(cat, error)
-            else:
-                self.redis.add_unknown_error(decode_error) # add unmatched back into unknowns
-                self.redis.add_unknown_error(error)
+                return True
 
     def classify(self, error):
         """Determine which category, if any, a signature belongs to.
@@ -115,11 +106,12 @@ class Levenshtein(Classifier):
         Args:
             error: dict of json payload with a 'sig' key.
         """
-        self.check_message('unknown_errors', error)
         categories = self.redis.get_categories()
         # Let's see if our message matches a category
-        if categories:
-            for cat in categories:
-                self.check_message(cat, error)
+        for cat in categories:
+            if self.check_message(cat, error):
+                break
         else:
-            self.redis.add_unknown_error(error)
+            cat_sig = error['sig']
+            self.redis.add_category(cat_sig)
+            self.write_errors(cat_sig, error)
